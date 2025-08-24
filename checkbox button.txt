@@ -1,0 +1,95 @@
+==> DEVELOPER Panel : Record Macro : give it a name : then Visual Basic
+    then clear the script and paste these
+
+==> can be choosed from (select cell's' -> Macros -> function)
+
+
+
+Sub InsertCheckBox()
+    Dim cb As CheckBox
+    Dim c As Range
+    Dim cbWidth As Double, cbHeight As Double
+    Dim shp As Shape
+    
+    cbWidth = 8.43
+    cbHeight = 15
+    
+    For Each c In Selection.Cells
+        If Not c.MergeCells Then
+            ' Remove existing checkbox in this cell
+            For Each shp In ActiveSheet.Shapes
+                If shp.Type = msoFormControl Then
+                    If shp.Left + shp.Width / 2 >= c.Left And shp.Left + shp.Width / 2 < c.Left + c.Width _
+                    And shp.Top + shp.Height / 2 >= c.Top And shp.Top + shp.Height / 2 < c.Top + c.Height Then
+                        shp.Delete
+                    End If
+                End If
+            Next shp
+            
+            ' Set cell to FALSE initially and hide it
+            c.Value = False
+            c.NumberFormat = ";;;"
+            
+            ' Create new checkbox
+            Set cb = ActiveSheet.CheckBoxes.Add(0, 0, cbWidth, cbHeight)
+            
+            With cb
+                .Caption = ""
+                .Placement = xlMoveAndSize
+                .Value = xlOff
+                ' Center in the cell
+                .Left = c.Left + (c.Width - .Width) / 2
+                .Top = c.Top + (c.Height - .Height) / 2
+                ' ? No LinkedCell (independent checkboxes)
+                .LinkedCell = c.Address
+            End With
+        End If
+    Next c
+    
+    ' Register custom Undo
+    Application.OnUndo "Undo Insert Checkboxes", "UndoInsertIndependentCheckBoxes"
+End Sub
+
+Sub UndoInsertCheckBox()
+    Dim shp As Shape
+    For Each shp In ActiveSheet.Shapes
+        If shp.Type = msoFormControl Then shp.Delete
+    Next shp
+End Sub
+
+
+Sub ClearCheckBox()
+    Dim c As Range
+    Dim shp As Shape
+    Dim cbCenterX As Double, cbCenterY As Double
+    
+    For Each c In Selection.Cells
+        ' Loop through all shapes on sheet
+        For Each shp In ActiveSheet.Shapes
+            If shp.Type = msoFormControl Then
+                ' Get the center of the shape
+                cbCenterX = shp.Left + shp.Width / 2
+                cbCenterY = shp.Top + shp.Height / 2
+                
+                ' Check if the center lies inside the cell
+                If cbCenterX >= c.Left And cbCenterX < c.Left + c.Width _
+                And cbCenterY >= c.Top And cbCenterY < c.Top + c.Height Then
+                    shp.Delete
+                End If
+            End If
+        Next shp
+        
+        ' Reset cell formatting
+        c.NumberFormat = "General"
+        c.ClearContents
+    Next c
+    
+    ' Register custom Undo
+    Application.OnUndo "Undo Clear Checkboxes", "UndoClearCheckBoxesAndResetCells"
+End Sub
+
+Sub UndoClearCheckBox()
+    ' Simple undo: restore General format & empty contents for selection
+    Selection.ClearContents
+    Selection.NumberFormat = "General"
+End Sub
